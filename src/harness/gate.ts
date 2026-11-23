@@ -11,13 +11,14 @@ export function gateMet(p: Progress, c: InterviewConfig): boolean {
 export function decideEnd(p: Progress, aiDone: boolean, c: InterviewConfig): EndDecision {
   const mins = gateMet(p, c);
 
+  // Portão: a IA quer acabar E os mínimos foram atingidos.
+  // Vem primeiro: se as duas coisas valem na pergunta 12, a entrevista terminou COMPLETA ("gate").
+  if (aiDone && mins) {
+    return { done: true, endReason: "gate", incomplete: false };
+  }
   // Teto de segurança: bateu o máximo, acaba de qualquer jeito.
   if (p.questionCount >= c.maxQuestions) {
     return { done: true, endReason: "max", incomplete: !mins };
-  }
-  // Portão: a IA quer acabar E os mínimos foram atingidos.
-  if (aiDone && mins) {
-    return { done: true, endReason: "gate", incomplete: false };
   }
   // Qualquer outro caso: continua.
   return { done: false, endReason: null, incomplete: false };

@@ -23,6 +23,21 @@ test("VC-06: rejeita minFollowUps maior que minQuestions - 1", () => {
   );
 });
 
+test("VC-06: rejeita números que não são números de verdade (entrada hostil)", () => {
+  const ruins: [string, object][] = [
+    ["max NaN", { maxQuestions: NaN }],
+    ["max Infinity", { maxQuestions: Infinity }],
+    ["min quebrado", { minQuestions: 6.5 }],
+    ["min em texto", { minQuestions: "6" }],
+    ["peso NaN", { weights: { ...DEFAULT_CONFIG.weights, role_fit: NaN } }],
+    // soma 1, mas tem peso negativo: 0.7 + 0.25 + 0.2 - 0.15 = 1
+    ["peso negativo", { weights: { technical_depth: 0.7, problem_solving: 0.25, communication: 0.2, role_fit: -0.15 } }],
+  ];
+  for (const [nome, troca] of ruins) {
+    assert.throws(() => validateConfig({ ...DEFAULT_CONFIG, ...troca } as never), undefined, nome);
+  }
+});
+
 test("VC-06: rejeita pesos que não somam 1", () => {
   assert.throws(
     () =>

@@ -26,4 +26,5 @@ Ao fim de cada fase, responda em voz alta os "Pare e responda" do capítulo.
 ## Estado atual
 - [x] Fase 0: harness do projeto criado
 - [x] Fase 1: `types.ts`, `validateConfig`, VC-06 verde (4 testes)
-- [ ] Fase 2
+- [x] Fase 2: portão, verifyFollowUp, applyTurn, plano B, finalScore; 41 testes verdes; revisado por verificador
+- [ ] Fase 3

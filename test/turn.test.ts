@@ -16,7 +16,7 @@ test("VC-05: a 1a pergunta conta como pergunta, mas nunca como follow-up", () =>
   assert.equal(s.done, false);
 });
 
-test("follow-up de verdade sobe o placar", () => {
+test("VC-07: follow-up de verdade sobe o placar", () => {
   const s = applyTurn(
     startInterview(VAGA),
     { nextQuestion: "Como você escolheu os índices compostos do Postgres?", done: false },
@@ -88,14 +88,22 @@ test("VC-10: plano B nunca encerra, mesmo com a IA tentando { done: true } sem p
   assert.equal(s.current?.source, "fallback");
 });
 
-test("applyTurn não altera o placar antigo (gera um novo)", () => {
+test("VC-07/VC-10: a pergunta reserva NUNCA conta como follow-up (mesmo repetindo palavras)", () => {
+  // o candidato "sabe" a pergunta reserva e responde com as palavras dela
+  const s = applyTurn(startInterview(VAGA), null, "Um projeto do qual me orgulha muito", C);
+  assert.equal(s.current?.source, "fallback");
+  assert.equal(s.current?.followUpVerified, false);
+  assert.equal(s.verifiedFollowUps, 0);
+});
+
+test("harness puro: applyTurn não altera o placar antigo (gera um novo)", () => {
   const antes = startInterview(VAGA);
   const copia = structuredClone(antes);
   applyTurn(antes, { nextQuestion: "Qual seu hobby?", done: false }, "Postgres", C);
   assert.deepEqual(antes, copia);
 });
 
-test("depois que acabou, novos turnos não mudam nada", () => {
+test("VC-04: depois que acabou, novos turnos não mudam nada", () => {
   let s = startInterview(VAGA);
   for (let i = 0; i < 12; i++) s = applyTurn(s, { nextQuestion: "Qual seu hobby?", done: false }, "ok", C);
   assert.equal(s.done, true);
@@ -104,7 +112,7 @@ test("depois que acabou, novos turnos não mudam nada", () => {
 });
 
 // O TESTE MAIS IMPORTANTE DO PROJETO (testing-pattern.md).
-test("IA MENTINDO em todo turno NÃO fecha a entrevista: só acaba no máximo, incompleta", () => {
+test("VC-01/VC-04/VC-07: IA MENTINDO em todo turno NÃO fecha a entrevista: só acaba no máximo, incompleta", () => {
   const mentira = { nextQuestion: "Qual é o seu hobby favorito?", isFollowUp: true, done: true };
   let s = startInterview(VAGA);
   for (let i = 0; i < 20; i++) s = applyTurn(s, mentira, "Trabalhei com Postgres e índices", C);
