@@ -30,6 +30,12 @@ test("VC-07: 2 palavras em comum, mas menos de 20% da pergunta, NÃO basta", () 
   assert.equal(verifyFollowUp(pergunta, "Usei cache com redis"), false);
 });
 
+test("VC-07: exatamente 20% (2 de 10 palavras) JÁ basta — a regra é 'maior ou igual'", () => {
+  const pergunta =
+    "Explique arquitetura distribuída escalável resiliente tolerante falhas redes cache redis";
+  assert.equal(verifyFollowUp(pergunta, "Usei cache com redis"), true);
+});
+
 test("VC-07: acentos não atrapalham (implementação = implementacao)", () => {
   const resposta = "Fiz a implementação da autenticação com tokens JWT";
   assert.equal(verifyFollowUp("Como foi a implementacao da autenticacao?", resposta), true);

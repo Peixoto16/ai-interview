@@ -23,10 +23,10 @@ Fonte da verdade para o comportamento da entrevista. Critérios em EARS; cada um
 - VC-01 O sistema NÃO DEVE aceitar pedido de encerramento da IA antes de registrar pelo menos 6 perguntas e 2 follow-ups VERIFICADOS.
 - VC-02 QUANDO a IA propõe encerrar E os mínimos foram atingidos, o sistema DEVE encerrar e registrar o motivo "gate".
 - VC-03 ENQUANTO os mínimos não foram atingidos, o sistema NÃO DEVE encerrar por pedido da IA.
-- VC-04 SE a entrevista atingir o máximo de perguntas, ENTÃO o sistema DEVE encerrar, registrar o motivo "max" e marcar como incompleta se os mínimos não foram atingidos.
+- VC-04 SE a entrevista atingir o máximo de perguntas, ENTÃO o sistema DEVE encerrar, registrar o motivo "max" e marcar como incompleta se os mínimos não foram atingidos. Se no mesmo turno valer o VC-02 (IA quer encerrar E mínimos atingidos), o motivo é "gate".
 - VC-05 O sistema DEVE tratar a primeira pergunta como não follow-up.
 - VC-06 O sistema NÃO DEVE aceitar config com máximo < mínimo, nem minFollowUps > minQuestions - 1, nem pesos que não somam 1.
-- VC-07 Um follow-up é VERIFICADO se a pergunta compartilha >= 2 palavras de conteúdo com a resposta anterior E elas somam >= 20% das palavras de conteúdo da pergunta. O campo `isFollowUp` da IA DEVE ser ignorado.
+- VC-07 Um follow-up é VERIFICADO se a pergunta compartilha >= 2 palavras de conteúdo com a resposta anterior E elas somam >= 20% das palavras de conteúdo da pergunta. O campo `isFollowUp` da IA DEVE ser ignorado. A pergunta de reserva (VC-10) NUNCA conta como follow-up.
 - VC-08 SE a resposta do candidato contém padrão de injeção, ENTÃO o sistema DEVE levantar uma bandeira que a opinião da IA não derruba. O detector só lê falas do candidato.
 - VC-09 O sistema DEVE calcular a nota final por função determinística sobre notas por dimensão (inteiros de 1 a 5, sem repetir nem faltar) e NÃO DEVE aceitar nota final vinda da IA.
 - VC-10 SE a proposta da IA vier inválida, ENTÃO o sistema DEVE usar a pergunta de reserva ligada à vaga, que nunca encerra, e registrar o motivo.

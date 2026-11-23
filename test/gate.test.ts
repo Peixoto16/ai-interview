@@ -6,7 +6,7 @@ import { DEFAULT_CONFIG as C } from "../src/harness/config.ts";
 // Atalho para montar o placar nos testes.
 const p = (questionCount: number, verifiedFollowUps: number) => ({ questionCount, verifiedFollowUps });
 
-test("gateMet: só é verdadeiro com 6 perguntas E 2 follow-ups verificados", () => {
+test("VC-01: gateMet só é verdadeiro com 6 perguntas E 2 follow-ups verificados", () => {
   assert.equal(gateMet(p(6, 2), C), true);
   assert.equal(gateMet(p(5, 2), C), false); // falta pergunta
   assert.equal(gateMet(p(6, 1), C), false); // falta follow-up
@@ -22,8 +22,12 @@ test("VC-02: IA quer acabar E mínimos atingidos → encerra com motivo 'gate'",
   assert.deepEqual(decideEnd(p(6, 2), true, C), { done: true, endReason: "gate", incomplete: false });
 });
 
-test("mínimos atingidos mas a IA NÃO quer acabar → segue perguntando", () => {
+test("VC-02: mínimos atingidos mas a IA NÃO quer acabar → segue perguntando", () => {
   assert.equal(decideEnd(p(8, 3), false, C).done, false);
+});
+
+test("VC-02/VC-04: IA quer acabar na pergunta 12 com mínimos ok → motivo 'gate' (terminou completa)", () => {
+  assert.deepEqual(decideEnd(p(12, 2), true, C), { done: true, endReason: "gate", incomplete: false });
 });
 
 test("VC-04: bateu o máximo → encerra com 'max'; incompleta se faltaram mínimos", () => {

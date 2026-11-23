@@ -50,7 +50,8 @@ export function applyTurn(
 
   // 4. Não acabou: a próxima pergunta vai ao ar.
   //    O CÓDIGO confere se ela é follow-up. O que a IA disse sobre isso não importa.
-  const isFollowUp = verifyFollowUp(nextQuestion, answer);
+  //    A pergunta reserva é fixa (o candidato pode conhecê-la), então NUNCA conta como follow-up.
+  const isFollowUp = parsed.ok && verifyFollowUp(nextQuestion, answer);
   const current: OpenQuestion = {
     question: nextQuestion,
     followUpVerified: isFollowUp,

@@ -10,6 +10,12 @@ export const DIMENSIONS = [
 
 export type Dimension = (typeof DIMENSIONS)[number];
 
+// A nota que a IA (avaliadora) dá para UMA área: inteiro de 1 a 5.
+export interface DimensionScore {
+  dimension: Dimension;
+  score: number;
+}
+
 // O placar da entrevista até agora (só o que o portão precisa ver).
 export interface Progress {
   questionCount: number; // perguntas já feitas

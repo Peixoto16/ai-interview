@@ -16,6 +16,17 @@ export const DEFAULT_CONFIG: InterviewConfig = {
 
 // VC-06: recusa config que não faz sentido. Se algo estiver errado, joga um erro.
 export function validateConfig(c: InterviewConfig): void {
+  // Contagens precisam ser números inteiros de verdade (não NaN, não Infinity, não "6").
+  for (const campo of ["minQuestions", "minFollowUps", "maxQuestions"] as const) {
+    if (!Number.isInteger(c[campo])) throw new Error(`${campo} precisa ser um número inteiro`);
+  }
+  // Cada peso precisa ser um número finito e não negativo.
+  for (const d of DIMENSIONS) {
+    const w = c.weights[d];
+    if (typeof w !== "number" || !Number.isFinite(w) || w < 0) {
+      throw new Error(`pesos: ${d} precisa ser um número >= 0`);
+    }
+  }
   if (!(c.minQuestions >= 1 && c.minFollowUps >= 0)) {
     throw new Error("mínimos inválidos");
   }
