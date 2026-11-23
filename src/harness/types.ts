@@ -32,3 +32,38 @@ export interface InterviewConfig {
   maxQuestions: number; // teto: encerra à força
   weights: Record<Dimension, number>; // peso de cada dimensão (somam 1)
 }
+
+// O que a IA manda a cada turno, DEPOIS de o código conferir (ver proposal.ts).
+// Repare: não existe `isFollowUp` aqui. Mesmo que a IA mande, o código joga fora.
+export interface Proposal {
+  nextQuestion: string; // a próxima pergunta que a IA sugere
+  done: boolean; // a OPINIÃO da IA: "acho que podemos acabar"
+}
+
+// Uma pergunta feita, com a resposta da pessoa.
+export interface Turn {
+  question: string;
+  answer: string;
+  followUpVerified: boolean; // decidido pelo CÓDIGO, não pela IA
+  source: "ai" | "fallback"; // veio da IA ou do plano B?
+}
+
+// A pergunta que está "no ar", esperando a pessoa responder.
+export interface OpenQuestion {
+  question: string;
+  followUpVerified: boolean;
+  source: "ai" | "fallback";
+}
+
+// O PLACAR COMPLETO da entrevista. Cada turno gera um placar novo.
+export interface InterviewState {
+  fallbackQuestion: string; // pergunta reserva da vaga (plano B)
+  turns: Turn[]; // histórico: perguntas já respondidas
+  current: OpenQuestion | null; // pergunta esperando resposta (null se acabou)
+  questionCount: number; // perguntas feitas
+  verifiedFollowUps: number; // follow-ups confirmados pelo código
+  done: boolean;
+  endReason: EndReason | null;
+  incomplete: boolean;
+  fallbackLog: string[]; // por que o plano B foi usado em cada vez
+}
