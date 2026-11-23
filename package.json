@@ -1,0 +1,9 @@
+{
+  "name": "ai-interview",
+  "private": true,
+  "type": "module",
+  "description": "AI interviewer: a IA propõe, o código decide.",
+  "scripts": {
+    "test": "node --experimental-strip-types --no-warnings --test \"test/**/*.test.ts\""
+  }
+}
