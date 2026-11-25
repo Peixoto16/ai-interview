@@ -1,5 +1,6 @@
 import { DIMENSIONS } from "./types.ts";
 import type { Dimension, InterviewConfig } from "./types.ts";
+import { validateConfig } from "./config.ts";
 
 // CONFERÊNCIA: as notas da IA seguem as regras? Se não, para tudo (não inventa número).
 // Recebe `unknown` porque, na prática, isso vem de uma IA e pode ser qualquer coisa.
@@ -30,6 +31,7 @@ function readScores(raw: unknown): Map<Dimension, number> {
 // VC-09: A CALCULADORA. Nota final de 0 a 100, sempre a mesma para as mesmas notas.
 // Repare: não existe parâmetro "nota final da IA". Não há por onde ela entrar.
 export function finalScore(raw: unknown, c: InterviewConfig): number {
+  validateConfig(c); // não confia que alguém validou antes: pesos ruins = erro, nunca NaN
   const notas = readScores(raw);
 
   // Média ponderada na escala 1 a 5. Soma sempre na mesma ordem (DIMENSIONS),
