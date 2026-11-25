@@ -27,10 +27,10 @@ Fonte da verdade para o comportamento da entrevista. Critérios em EARS; cada um
 - VC-05 O sistema DEVE tratar a primeira pergunta como não follow-up.
 - VC-06 O sistema NÃO DEVE aceitar config com máximo < mínimo, nem minFollowUps > minQuestions - 1, nem pesos que não somam 1.
 - VC-07 Um follow-up é VERIFICADO se a pergunta compartilha >= 2 palavras de conteúdo com a resposta anterior E elas somam >= 20% das palavras de conteúdo da pergunta. O campo `isFollowUp` da IA DEVE ser ignorado. A pergunta de reserva (VC-10) NUNCA conta como follow-up.
-- VC-08 SE a resposta do candidato contém padrão de injeção, ENTÃO o sistema DEVE levantar uma bandeira que a opinião da IA não derruba. O detector só lê falas do candidato.
+- VC-08 SE a resposta do candidato contém padrão de injeção, ENTÃO o sistema DEVE levantar uma bandeira que a opinião da IA não derruba. O detector só lê falas do candidato. A bandeira não encerra a entrevista (alarme, não muro), e o follow-up de um turno com bandeira NÃO conta como verificado.
 - VC-09 O sistema DEVE calcular a nota final por função determinística sobre notas por dimensão (inteiros de 1 a 5, sem repetir nem faltar) e NÃO DEVE aceitar nota final vinda da IA.
 - VC-10 SE a proposta da IA vier inválida, ENTÃO o sistema DEVE usar a pergunta de reserva ligada à vaga, que nunca encerra, e registrar o motivo.
-- VC-11 O replay de uma sessão salva DEVE recalcular contadores, motivo de fim, bandeiras e nota sem chamar a IA e obter os valores gravados.
+- VC-11 O replay de uma sessão salva DEVE recalcular contadores, motivo de fim, bandeiras e nota sem chamar a IA e obter os valores gravados. Qualquer diferença entre o gravado e o recalculado DEVE ser apontada campo a campo.
 - VC-12 As ferramentas da IA DEVEM ser só de leitura, sem parâmetro de ID, e argumentos fora do schema DEVEM ser rejeitados com erro registrado.
 
 ## Task breakdown

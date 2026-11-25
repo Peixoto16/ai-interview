@@ -61,6 +61,13 @@ export interface OpenQuestion {
   source: "ai" | "fallback";
 }
 
+// VC-08: o ALARME. Marca em qual turno a resposta do candidato parecia tentar mandar na IA,
+// e quais padrões foram achados. Só o código cria bandeiras; nada que a IA mande apaga uma.
+export interface InjectionFlag {
+  turn: number; // número do turno (1 = resposta à 1a pergunta)
+  patterns: string[]; // ex.: ["ignorar-instrucoes", "pedido-de-nota"]
+}
+
 // O PLACAR COMPLETO da entrevista. Cada turno gera um placar novo.
 export interface InterviewState {
   fallbackQuestion: string; // pergunta reserva da vaga (plano B)
@@ -72,4 +79,5 @@ export interface InterviewState {
   endReason: EndReason | null;
   incomplete: boolean;
   fallbackLog: string[]; // por que o plano B foi usado em cada vez
+  flags: InjectionFlag[]; // VC-08: tentativas de injeção (só cresce, nunca diminui)
 }
