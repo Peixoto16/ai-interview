@@ -17,10 +17,13 @@ export function isSecretEnvPath(p) {
   return /^\.env(\..+)?$/.test(name) && name !== ".env.example";
 }
 
-// Procura um token .env dentro de um comando de shell (cat .env, grep KEY ./.env, source .env...).
+// Procura um token .env dentro de um comando de shell (cat .env, type .\.env, cat .env*...).
+// Regra "bloquear a mais, nunca a menos": depois do nome, só NÃO conta se continuar com letra/número
+// (.envrc é outro arquivo). Coringa (*), crase, ponto, ; e fim de linha contam como .env.
+// Antes do nome aceita também \ (caminho do Windows), crase, ( e :.
 export function commandTouchesEnv(cmd) {
   if (typeof cmd !== "string") return false;
-  const re = /(?:^|[\s/'"=<])(\.env(?:\.[\w.-]+)?)(?=$|[\s'";|&)<>])/g;
+  const re = /(?:^|[\s/\\'"=<`(:;|&>])(\.env(?:\.[\w.-]+)?)(?![\w-])/g;
   for (const m of cmd.matchAll(re)) if (m[1] !== ".env.example") return true;
   return false;
 }
@@ -37,6 +40,7 @@ export function decide(input) {
     case "Glob":
       return /(^|\/)\.env(?!\.example)/.test(t.pattern ?? "") ? "listagem de .env bloqueada" : null;
     case "Bash":
+    case "PowerShell": // no Windows, a shell principal é o PowerShell
       return commandTouchesEnv(t.command) ? "comando de shell que lê .env bloqueado" : null;
     default:
       return null;
@@ -54,15 +58,20 @@ export function hookOutput(reason) {
 }
 
 // Execução como hook: lê stdin, escreve a decisão, sempre exit 0 (a decisão vai no JSON).
+// FAIL-CLOSED: se o próprio hook falhar (entrada ilegível, erro inesperado), ele BLOQUEIA.
+// Uma tranca quebrada fica fechada, nunca aberta.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   let raw = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (c) => (raw += c));
   process.stdin.on("end", () => {
-    let input;
-    try { input = JSON.parse(raw); } catch { process.exit(0); } // entrada estranha: não decide
-    const reason = decide(input);
-    if (reason) process.stdout.write(JSON.stringify(hookOutput(reason)));
+    try {
+      const reason = decide(JSON.parse(raw));
+      if (reason) process.stdout.write(JSON.stringify(hookOutput(reason)));
+    } catch (e) {
+      process.stderr.write(`block-env: entrada inválida (${e instanceof Error ? e.message : e})\n`);
+      process.stdout.write(JSON.stringify(hookOutput("hook não conseguiu ler a entrada, bloqueado por segurança")));
+    }
     process.exit(0);
   });
 }

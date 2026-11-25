@@ -1,4 +1,5 @@
 import type { EndDecision, InterviewConfig, Progress } from "./types.ts";
+import { validateConfig } from "./config.ts";
 
 // O PORTÃO: os mínimos foram atingidos? (os dois cadeados)
 // Conta só follow-ups VERIFICADOS pelo código, nunca o que a IA disse.
@@ -9,6 +10,7 @@ export function gateMet(p: Progress, c: InterviewConfig): boolean {
 // O JUIZ: a entrevista acaba agora?
 // aiDone é só a OPINIÃO da IA ("acho que podemos acabar"). O código decide.
 export function decideEnd(p: Progress, aiDone: boolean, c: InterviewConfig): EndDecision {
+  validateConfig(c); // sem teto válido não existe "max": config ruim = erro, nunca entrevista infinita
   const mins = gateMet(p, c);
 
   // Portão: a IA quer acabar E os mínimos foram atingidos.
