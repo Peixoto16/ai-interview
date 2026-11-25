@@ -16,6 +16,13 @@ Se uma garantia depende do LLM obedecer um texto, ela é esperança, não garant
 - Segredos só em `.env`. Não leia esse arquivo (hook + deny).
 - Todo requisito da spec tem um teste. Rode `npm test` antes de dizer que terminou.
 
+## Planejar antes de agir (obrigatório)
+Antes de QUALQUER tarefa (código, documento, commit, revisão):
+1. **Pergunte primeiro** se pode montar o plano. Não comece a planejar nem a executar sem o "pode".
+2. Com o "pode", analise e **mostre o plano**: o que vai fazer, em que ordem, quais arquivos mudam, o que fica para depois e o que o dono precisa decidir.
+3. **Só execute depois que o plano for aprovado.** Se o plano mudar no meio do caminho, pare e mostre de novo.
+Exceção: perguntas de explicação ("o que é X?") não precisam de plano.
+
 ## Fluxo de trabalho (spec-anchored)
 1. Spec primeiro (`docs/spec.md`, em EARS). 2. Teste que falha. 3. Código mínimo. 4. `npm test` verde.
 Quem implementa não é quem verifica: use o subagente `verifier` (só leitura) para conferir contra a spec.
