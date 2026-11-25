@@ -27,4 +27,5 @@ Ao fim de cada fase, responda em voz alta os "Pare e responda" do capítulo.
 - [x] Fase 0: harness do projeto criado
 - [x] Fase 1: `types.ts`, `validateConfig`, VC-06 verde (4 testes)
 - [x] Fase 2: portão, verifyFollowUp, applyTurn, plano B, finalScore; 41 testes verdes; revisado por verificador
-- [ ] Fase 3
+- [x] Fase 3: threat model, `detectInjection` (alarme), `runSession` + `replay` (câmera); VC-08 e VC-11 verdes; 73 testes; revisado por verificador
+- [ ] Fase 4

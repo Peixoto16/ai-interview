@@ -26,8 +26,9 @@ Uma IA é criativa, mas não é confiável: ela pode querer encerrar a entrevist
 | 0 | Harness do projeto (CLAUDE.md, regras, hook do `.env`, subagente, skills) | feito |
 | 1 | Spec em EARS, tipos e `validateConfig` | feito |
 | 2 | Portão de fim, verificação de follow-up, `applyTurn`, plano B, nota final | feito |
-| 3 | Detector de injeção e replay de sessões | próximo |
-| 4 a 10 | Evals, integração com Claude, ferramentas, API, tela, ADR | planejado |
+| 3 | Threat model, detector de injeção (alarme) e replay de sessões | feito |
+| 4 | Evals e golden set | próximo |
+| 5 a 10 | Integração com Claude, ferramentas, API, tela, ADR | planejado |
 
 Hoje o projeto tem **só o harness** (a parte determinística). Ainda **não** chama nenhum modelo de IA, não tem API nem tela. O roteiro completo está em [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -39,7 +40,7 @@ Requisitos: [Node.js](https://nodejs.org) 22 ou mais novo (testado na v26). Não
 npm test
 ```
 
-Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **41 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
+Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **73 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
 
 ## Estrutura
 
