@@ -28,4 +28,5 @@ Ao fim de cada fase, responda em voz alta os "Pare e responda" do capítulo.
 - [x] Fase 1: `types.ts`, `validateConfig`, VC-06 verde (4 testes)
 - [x] Fase 2: portão, verifyFollowUp, applyTurn, plano B, finalScore; 41 testes verdes; revisado por verificador
 - [x] Fase 3: threat model, `detectInjection` (alarme), `runSession` + `replay` (câmera); VC-08 e VC-11 verdes; 73 testes; revisado por verificador
-- [ ] Fase 4
+- [x] Fase 4: 6 IAs simuladas + invariantes (`structureProblems`), golden set (16 itens, 4 com áreas contrastantes; notas propostas pelo Claude e aprovadas pelo dono), régua de concordância (`agreementReport` + `releaseGate`, kappa e viés no geral e por área); VC-13; quebrar o portão deixa 8 testes vermelhos; 97 testes; revisado por verificador
+- [ ] Fase 5

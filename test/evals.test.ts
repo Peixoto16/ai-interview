@@ -142,26 +142,55 @@ test("evals: fallbackRate é 0 quando a IA nunca manda lixo", () => {
 
 const valido = (): InterviewState => rodar(boa);
 
-test("evals: structureProblems pega estados impossíveis", () => {
-  const casos: [string, InterviewState][] = [
-    ["passou do teto", { ...valido(), questionCount: C.maxQuestions + 1 }],
-    ["follow-ups demais", { ...valido(), verifiedFollowUps: 99 }],
-    ["acabou mas tem pergunta no ar", { ...valido(), current: { question: "x", followUpVerified: false, source: "ai" } }],
-    ["acabou sem motivo", { ...valido(), endReason: null }],
-    ["portão sem os mínimos", { ...valido(), verifiedFollowUps: 1 }],
-    ["'max' sem bater o teto", { ...valido(), endReason: "max" }],
-    ["incompleta sem ter acabado", { ...startInterview(VAGA), incomplete: true }],
+// Muda uma pergunta já respondida (índice i) do estado válido.
+const trocarTurno = (i: number, mudanca: object): InterviewState => {
+  const s = valido();
+  return { ...s, turns: s.turns.map((t, k) => (k === i ? { ...t, ...mudanca } : t)) };
+};
+
+// Cada caso confere a MENSAGEM da sua regra (não só "algum problema"):
+// assim, apagar uma regra deixa o caso dela vermelho, mesmo que outra regra também dispare.
+test("evals: structureProblems pega cada estado impossível pela regra certa", () => {
+  const casos: [string, InterviewState, string][] = [
+    ["passou do teto", { ...valido(), questionCount: C.maxQuestions + 1 }, "fora de 1.."],
+    ["contagem não bate com as perguntas", { ...valido(), questionCount: 5 }, "diferente das perguntas registradas"],
+    ["follow-ups demais", { ...valido(), verifiedFollowUps: 99 }, "fora de 0.."],
+    ["follow-ups não batem com as marcadas", { ...valido(), verifiedFollowUps: 1 }, "diferente das perguntas marcadas"],
+    ["1ª pergunta como follow-up", trocarTurno(0, { followUpVerified: true }), "a 1ª pergunta"],
+    ["pergunta reserva como follow-up", trocarTurno(1, { source: "fallback" }), "pergunta reserva marcada como follow-up"],
+    ["pergunta reserva sem motivo", trocarTurno(2, { source: "fallback" }), "sem motivo registrado"],
     [
-      "pergunta reserva contada como follow-up",
-      {
-        ...valido(),
-        turns: valido().turns.map((t, i) => (i === 1 ? { ...t, source: "fallback" as const, followUpVerified: true } : t)),
-      },
+      "acabou mas tem pergunta no ar",
+      { ...valido(), current: { question: "x", followUpVerified: false, source: "ai" } },
+      "done e pergunta no ar",
     ],
-    ["bandeira em turno que não existe", { ...valido(), flags: [{ turn: 99, patterns: ["x"] }] }],
-    ["bandeira sem padrão", { ...valido(), flags: [{ turn: 1, patterns: [] }] }],
+    ["acabou sem motivo", { ...valido(), endReason: null }, "done e endReason"],
+    ["motivo inventado", { ...valido(), endReason: "xyz" as never }, "endReason inválido"],
+    ["incompleta sem ter acabado", { ...startInterview(VAGA), incomplete: true }, "sem ter acabado"],
+    ["portão sem os mínimos", { ...valido(), verifiedFollowUps: 1 }, "portão sem os mínimos"],
+    ["portão mas incompleta", { ...valido(), incomplete: true }, "portão mas está incompleta"],
+    ["'max' sem bater o teto", { ...valido(), endReason: "max" }, 'motivo "max"'],
+    ["'max' com 'incompleta' errada", { ...rodar(tagarela), incomplete: true }, "'incompleta' não bate"],
+    ["bandeira em turno que não existe", { ...valido(), flags: [{ turn: 99, patterns: ["x"] }] }, "que não existe"],
+    [
+      "bandeiras fora de ordem",
+      { ...valido(), flags: [{ turn: 4, patterns: ["x"] }, { turn: 2, patterns: ["x"] }] },
+      "fora de ordem",
+    ],
+    ["bandeira sem padrão", { ...valido(), flags: [{ turn: 2, patterns: [] }] }, "sem padrão"],
+    // VC-08: depois de uma resposta com bandeira, a próxima pergunta NÃO pode contar como follow-up.
+    // (na IA boa, a pergunta logo após a resposta 1 é um follow-up verificado)
+    [
+      "follow-up logo após bandeira",
+      { ...valido(), flags: [{ turn: 1, patterns: ["ignorar-instrucoes"] }] },
+      "logo após bandeira",
+    ],
   ];
-  for (const [nome, estado] of casos) {
-    assert.ok(structureProblems(estado, C).length > 0, `deveria pegar: ${nome}`);
+  for (const [nome, estado, trecho] of casos) {
+    const problemas = structureProblems(estado, C);
+    assert.ok(
+      problemas.some((p) => p.includes(trecho)),
+      `deveria pegar "${nome}" com "${trecho}", mas veio: ${JSON.stringify(problemas)}`,
+    );
   }
 });

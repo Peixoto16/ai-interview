@@ -125,6 +125,36 @@ test("VC-13: o portão olha CADA área, não só o geral", () => {
   assert.ok(r.reasons.some((m) => m.includes("role_fit")));
 });
 
+test("VC-13: viés que se CANCELA entre as áreas reprova (+1 em umas, −1 em outras)", () => {
+  // viés geral ≈ 0, mas a IA erra para cima em técnica/problemas e para baixo em comunicação/vaga
+  const cancelado = (it: GoldenItem) =>
+    porArea(it, (h, j) => limitar(j < 2 ? h + 1 : h - 1));
+  const rel = agreementReport(itens, cancelado);
+  assert.ok(Math.abs(rel.meanBias) <= MAX_ABS_BIAS, `o viés geral sozinho passaria: ${rel.meanBias}`);
+  const r = releaseGate(rel);
+  assert.equal(r.ok, false);
+  assert.ok(r.reasons.some((m) => m.startsWith("viés de ")), r.reasons.join("; "));
+});
+
+test("VC-13: a IA 'efeito halo' (mesma nota nas 4 áreas, sem avaliar cada uma) reprova", () => {
+  // Dá a todas as áreas a média arredondada do candidato. Só reprova se o gabarito tiver
+  // candidatos bons numa área e fracos em outra (por isso existem os itens g13 a g16).
+  const halo = (it: GoldenItem) => {
+    const media = Math.round(DIMENSIONS.reduce((s, d) => s + it.humano[d], 0) / DIMENSIONS.length);
+    return porArea(it, () => media);
+  };
+  const r = releaseGate(agreementReport(itens, halo));
+  assert.equal(r.ok, false, "a régua deveria pegar quem não avalia cada área");
+});
+
+test("VC-13: o gabarito tem candidatos com áreas bem diferentes (diferença de 3+ pontos)", () => {
+  const contrastantes = itens.filter((it) => {
+    const notas = DIMENSIONS.map((d) => it.humano[d]);
+    return Math.max(...notas) - Math.min(...notas) >= 3;
+  });
+  assert.ok(contrastantes.length >= 4, `só ${contrastantes.length} itens com áreas contrastantes`);
+});
+
 test("VC-13: os limites são os do livro", () => {
   assert.equal(KAPPA_MIN, 0.6);
   assert.equal(MAX_ABS_BIAS, 0.5);

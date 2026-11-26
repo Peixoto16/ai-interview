@@ -40,6 +40,10 @@ export function structureProblems(s: InterviewState, c: InterviewConfig): string
   }
 
   // fim da entrevista
+  // (um estado vindo de arquivo salvo pode trazer qualquer coisa: só existem estes 3 motivos)
+  if (s.endReason !== null && s.endReason !== "gate" && s.endReason !== "max") {
+    problemas.push(`endReason inválido: ${JSON.stringify(s.endReason)}`);
+  }
   if (s.done !== (s.current === null)) problemas.push("done e pergunta no ar não combinam");
   if (s.done !== (s.endReason !== null)) problemas.push("done e endReason não combinam");
   if (!s.done && s.incomplete) problemas.push("marcada como incompleta sem ter acabado");
@@ -56,6 +60,9 @@ export function structureProblems(s: InterviewState, c: InterviewConfig): string
     if (f.turn < 1 || f.turn > s.turns.length) problemas.push(`bandeira no turno ${f.turn}, que não existe`);
     if (f.turn <= anterior) problemas.push("bandeiras fora de ordem ou repetidas");
     if (f.patterns.length === 0) problemas.push(`bandeira no turno ${f.turn} sem padrão`);
+    // VC-08 (ameaça A2): a pergunta feita logo depois da resposta com bandeira é `todas[f.turn]`
+    // (a resposta 1 é seguida pela pergunta 2, que está no índice 1). Ela não pode contar como follow-up.
+    if (todas[f.turn]?.followUpVerified) problemas.push(`follow-up contado logo após bandeira no turno ${f.turn}`);
     anterior = f.turn;
   }
 

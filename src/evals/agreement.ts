@@ -140,7 +140,8 @@ export function agreementReport(itens: GoldenItem[], judge: (item: GoldenItem) =
 }
 
 // O PORTÃO DE LIBERAÇÃO: só confia na IA avaliadora se o kappa geral E o de cada área passarem
-// do mínimo, E o viés médio for pequeno. Um kappa geral alto pode esconder uma área ruim.
+// do mínimo, E o viés for pequeno no geral E em cada área. Um número geral bom pode esconder
+// uma área ruim (ex.: +1 em técnica e −1 em comunicação dá viés geral ≈ 0).
 export function releaseGate(
   r: AgreementReport,
   kappaMin = KAPPA_MIN,
@@ -155,6 +156,10 @@ export function releaseGate(
     if (!(k >= kappaMin)) reasons.push(`kappa de ${d} ${fmt(k)} < ${kappaMin}`);
   }
   if (!(Math.abs(r.meanBias) <= maxAbsBias)) reasons.push(`viés médio ${fmt(r.meanBias)} fora de ±${maxAbsBias}`);
+  for (const d of DIMENSIONS) {
+    const b = r.perDimension[d].meanBias;
+    if (!(Math.abs(b) <= maxAbsBias)) reasons.push(`viés de ${d} ${fmt(b)} fora de ±${maxAbsBias}`);
+  }
 
   return { ok: reasons.length === 0, reasons };
 }

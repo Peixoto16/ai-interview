@@ -32,6 +32,7 @@ Fonte da verdade para o comportamento da entrevista. Critérios em EARS; cada um
 - VC-10 SE a proposta da IA vier inválida, ENTÃO o sistema DEVE usar a pergunta de reserva ligada à vaga, que nunca encerra, e registrar o motivo.
 - VC-11 O replay de uma sessão salva DEVE recalcular contadores, motivo de fim, bandeiras e nota sem chamar a IA e obter os valores gravados. Qualquer diferença entre o gravado e o recalculado DEVE ser apontada campo a campo.
 - VC-12 As ferramentas da IA DEVEM ser só de leitura, sem parâmetro de ID, e argumentos fora do schema DEVEM ser rejeitados com erro registrado.
+- VC-13 A IA avaliadora (judge) NÃO DEVE ser usada a menos que, no golden set (12+ entrevistas com nota humana), tenha kappa quadrático >= 0,6 no geral E em cada área, E viés médio de no máximo 0,5 ponto no geral E em cada área.
 
 ## Task breakdown
 Fase 1 tipos + spec do harness → 2 follow-up/portão/nota/plano B → 3 detector + replay → 4 evals + golden set
