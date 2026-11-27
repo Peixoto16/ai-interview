@@ -1,0 +1,49 @@
+# Review automático: quando um PR abre, o Claude roda a skill /review (.claude/skills/review)
+# e publica o relatório como comentário no PR.
+# Roda só ao abrir/reabrir o PR ou ao sair de rascunho (economiza o limite do plano).
+# Para rodar de novo: aba Actions → este workflow → "Re-run jobs".
+
+name: Claude Review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+# Um review por PR de cada vez.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Mínimo necessário: ler o código e comentar no PR.
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # a skill compara com a main
+
+      # Os testes rodam TypeScript direto no Node (precisa de 22+). Sem dependências para instalar.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: "/review PR #${{ github.event.pull_request.number }}"
+          # Lista fechada: só o que a skill precisa. Write serve para salvar o review.md;
+          # mesmo se escrever outra coisa, não há permissão de commit/push (contents: read).
+          claude_args: |
+            --max-turns 30
+            --allowedTools "Agent,Task,Read,Glob,Grep,Write,Bash(npm test),Bash(gh pr diff *),Bash(gh pr view *),Bash(gh api *),Bash(gh pr comment *),Bash(git diff *)"
