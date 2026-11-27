@@ -45,7 +45,7 @@ npm run entrevista   # entrevista de verdade no terminal (precisa de ANTHROPIC_A
 
 Para trocar o modelo, coloque `AI_INTERVIEW_MODEL=...` no `.env` (padrão: `claude-haiku-5-5`, o mais barato). As sessões ficam em `sessoes/`, fora do git.
 
-Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **123 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
+Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **133 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
 
 ## Estrutura
 
@@ -67,7 +67,7 @@ ai-interview/
 ├── evals/              # golden set: entrevistas com nota humana (o gabarito)
 ├── test/               # um teste por critério da spec (nome cita o VC)
 ├── docs/
-│   ├── spec.md         # as regras da entrevista (VC-01 a VC-17)
+│   ├── spec.md         # as regras da entrevista (VC-01 a VC-18)
 │   ├── loop-spec.md    # como o laço com o Claude funciona (Fase 5)
 │   ├── contrato-harness.md
 │   └── ROADMAP.md      # as fases do projeto

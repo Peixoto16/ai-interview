@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runInterview } from "../src/loop/entrevista.ts";
-import { extrairJson } from "../src/policy/claude.ts";
+import { extrairJson, claudeCall } from "../src/policy/claude.ts";
+import { FalhaDaIA } from "../src/llm/types.ts";
 import type { LlmCall, LlmRequest } from "../src/llm/types.ts";
 import type { Vaga } from "../src/policy/context.ts";
 import { DEFAULT_CONFIG } from "../src/harness/config.ts";
@@ -41,8 +42,11 @@ function claudeBom(): LlmCall & { pedidos: LlmRequest[] } {
     pedidos.push(req);
     const n = pedidos.length;
     return {
-      nextQuestion: n % 2 === 1 ? `Sobre filas e reprocessamento, como funcionava o limite de tentativas? (${n})` : `Pergunta nova ${n}: fale de outro projeto.`,
-      done: n >= 6,
+      saida: {
+        nextQuestion: n % 2 === 1 ? `Sobre filas e reprocessamento, como funcionava o limite de tentativas? (${n})` : `Pergunta nova ${n}: fale de outro projeto.`,
+        done: n >= 6,
+      },
+      modelo: "claude-falso-respondeu",
     };
   };
   return Object.assign(call, { pedidos });
@@ -70,7 +74,7 @@ test("VC-16: no máximo uma chamada à IA por pergunta respondida", async () => 
 });
 
 test("VC-16: uma IA que nunca quer encerrar para no teto de perguntas", async () => {
-  const tagarela: LlmCall = async () => ({ nextQuestion: "Mais uma coisa?", done: false });
+  const tagarela: LlmCall = async () => ({ saida: { nextQuestion: "Mais uma coisa?", done: false }, modelo: "fake" });
   const c = candidato();
   const r = await runInterview({ vaga, config: DEFAULT_CONFIG, call: tagarela, ask: c.ask, model: "fake" });
   assert.equal(r.state.endReason, "max");
@@ -107,7 +111,7 @@ test("VC-14: Claude que trava (nunca responde) → limite de tempo, plano B, e a
 });
 
 test("VC-14: Claude devolvendo lixo → plano B e motivo registrado", async () => {
-  const quebrado: LlmCall = async () => "isto não é JSON";
+  const quebrado: LlmCall = async () => ({ saida: "isto não é JSON", modelo: "fake" });
   const c = candidato();
   const r = await runInterview({ vaga, config: DEFAULT_CONFIG, call: quebrado, ask: c.ask, model: "fake" });
   assert.equal(r.state.done, true);
@@ -129,7 +133,9 @@ test("VC-17: a sessão salva tem as saídas brutas, o modelo e a versão do prom
   const ia = claudeBom();
   const c = candidato();
   const r = await runInterview({ vaga, config: DEFAULT_CONFIG, call: ia, ask: c.ask, model: "claude-falso" });
-  assert.equal(r.record.meta.model, "claude-falso");
+  // grava o modelo que RESPONDEU, e também o que foi pedido
+  assert.equal(r.record.meta.model, "claude-falso-respondeu");
+  assert.equal(r.record.meta.modeloPedido, "claude-falso");
   assert.ok(r.record.meta.promptVersion.length > 0);
   assert.equal(r.record.turns.length, r.chamadas);
   // a saída BRUTA da 1a chamada, exatamente como o Claude falso devolveu
@@ -166,4 +172,109 @@ test("VC-14: recusa, resposta cortada, JSON inválido e resposta vazia viram err
     ["vazia", { stop_reason: "end_turn", content: [] }, /vazia/i],
   ];
   for (const [nome, msg, erro] of casos) assert.throws(() => extrairJson(msg as never), erro, nome);
+});
+
+test("VC-17: o texto bruto de recusa, resposta cortada e JSON inválido vai junto com o erro", () => {
+  const casos: [unknown, string][] = [
+    [{ stop_reason: "refusal", content: [{ type: "text", text: "Não posso ajudar." }] }, "Não posso ajudar."],
+    [{ stop_reason: "max_tokens", content: [{ type: "text", text: '{"nextQ' }] }, '{"nextQ'],
+    [{ stop_reason: "end_turn", content: [{ type: "text", text: "olá!" }] }, "olá!"],
+  ];
+  for (const [msg, bruto] of casos) {
+    assert.throws(
+      () => extrairJson(msg as never),
+      (e: unknown) => e instanceof FalhaDaIA && e.bruto === bruto,
+    );
+  }
+});
+
+test("VC-17: quando a IA falha, a sessão grava o motivo E o texto bruto que chegou", async () => {
+  const doido: LlmCall = async () => {
+    throw new FalhaDaIA("resposta não é JSON", "Claro! Aqui vai a pergunta: ...");
+  };
+  const c = candidato();
+  const r = await runInterview({ vaga, config: DEFAULT_CONFIG, call: doido, ask: c.ask, model: "fake" });
+  assert.equal(r.record.meta.falhas.length, r.chamadas);
+  assert.deepEqual(r.record.meta.falhas[0], {
+    turno: 1,
+    motivo: "resposta não é JSON",
+    bruto: "Claro! Aqui vai a pergunta: ...",
+  });
+  // erro comum (sem texto bruto) também fica gravado, só sem o campo `bruto`
+  const foraDoAr: LlmCall = async () => {
+    throw new Error("503");
+  };
+  const r2 = await runInterview({ vaga, config: DEFAULT_CONFIG, call: foraDoAr, ask: candidato().ask, model: "fake" });
+  assert.deepEqual(r2.record.meta.falhas[0], { turno: 1, motivo: "503" });
+});
+
+test("VC-17: sem nenhuma resposta do Claude, o modelo gravado é o que foi pedido", async () => {
+  const foraDoAr: LlmCall = async () => {
+    throw new Error("503");
+  };
+  const r = await runInterview({ vaga, config: DEFAULT_CONFIG, call: foraDoAr, ask: candidato().ask, model: "pedido-x" });
+  assert.equal(r.record.meta.model, "pedido-x");
+});
+
+test("VC-14: quando o prazo estoura, a chamada recebe o sinal de cancelar", async () => {
+  const sinais: AbortSignal[] = [];
+  const travado: LlmCall = (req) => {
+    if (req.signal) sinais.push(req.signal);
+    return new Promise(() => {});
+  };
+  const r = await runInterview({ vaga, config: DEFAULT_CONFIG, call: travado, ask: candidato().ask, model: "fake", timeoutMs: 5 });
+  assert.equal(sinais.length, r.chamadas);
+  assert.ok(sinais.every((s) => s.aborted), "toda chamada que estourou o prazo foi cancelada");
+});
+
+test("VC-14: chamada que responde a tempo NÃO é cancelada", async () => {
+  const sinais: AbortSignal[] = [];
+  const rapido: LlmCall = async (req) => {
+    if (req.signal) sinais.push(req.signal);
+    return { saida: { nextQuestion: "E depois?", done: false }, modelo: "fake" };
+  };
+  await runInterview({ vaga, config: DEFAULT_CONFIG, call: rapido, ask: candidato().ask, model: "fake" });
+  assert.ok(sinais.length > 0);
+  assert.ok(sinais.every((s) => !s.aborted));
+});
+
+test("VC-17: a sessão é entregue a cada turno (Ctrl+C no meio não perde nada) e cada pedaço passa no replay", async () => {
+  const pedacos: { turnos: number; ok: boolean }[] = [];
+  const r = await runInterview({
+    vaga,
+    config: DEFAULT_CONFIG,
+    call: claudeBom(),
+    ask: candidato().ask,
+    model: "fake",
+    aoTurno: (rec) => pedacos.push({ turnos: rec.turns.length, ok: replay(rec).ok }),
+  });
+  assert.deepEqual(
+    pedacos.map((p) => p.turnos),
+    Array.from({ length: r.chamadas }, (_, i) => i + 1),
+  );
+  assert.ok(pedacos.every((p) => p.ok));
+});
+
+// ---- claudeCall com um cliente falso no lugar do SDK (sem rede) ----
+
+test("VC-17 e VC-14: claudeCall devolve o modelo que respondeu e repassa o sinal de cancelar ao SDK", async () => {
+  let opcoesRecebidas: { signal?: AbortSignal } | undefined;
+  const cliente = {
+    messages: {
+      create: async (_corpo: unknown, opcoes?: { signal?: AbortSignal }) => {
+        opcoesRecebidas = opcoes;
+        return {
+          model: "claude-haiku-5-5-20261001",
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: '{"nextQuestion":"Oi?","done":false}' }],
+        };
+      },
+    },
+  };
+  const call = claudeCall({ modelo: "claude-haiku-5-5", cliente });
+  const ctrl = new AbortController();
+  const resp = await call({ system: "s", user: "u", schema: {}, maxTokens: 10, signal: ctrl.signal });
+  assert.equal(resp.modelo, "claude-haiku-5-5-20261001");
+  assert.deepEqual(resp.saida, { nextQuestion: "Oi?", done: false });
+  assert.equal(opcoesRecebidas?.signal, ctrl.signal);
 });

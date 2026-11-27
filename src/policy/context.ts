@@ -52,8 +52,32 @@ const SCHEMA = {
 };
 
 // O candidato não consegue "fechar o envelope": os sinais < e > do texto dele viram texto comum.
+// Só esses dois: sem < não existe tag, e o resto do texto (como "P&D") chega intacto.
 function emTexto(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// VC-18: a vaga vem de arquivo, então é dado de fora. Exatamente os 4 campos, todos texto não vazio.
+const CAMPOS_VAGA = ["titulo", "descricao", "openingQuestion", "fallbackQuestion"] as const;
+
+export function parseVaga(raw: unknown): Vaga {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    throw new Error("a vaga tem que ser um objeto JSON com titulo, descricao, openingQuestion e fallbackQuestion");
+  }
+  const r = raw as Record<string, unknown>;
+  for (const k of Object.keys(r)) {
+    if (!(CAMPOS_VAGA as readonly string[]).includes(k)) throw new Error(`vaga: campo desconhecido "${k}"`);
+  }
+  for (const k of CAMPOS_VAGA) {
+    const v = Object.hasOwn(r, k) ? r[k] : undefined;
+    if (typeof v !== "string" || v.trim() === "") throw new Error(`vaga: "${k}" tem que ser um texto não vazio`);
+  }
+  return {
+    titulo: r.titulo as string,
+    descricao: r.descricao as string,
+    openingQuestion: r.openingQuestion as string,
+    fallbackQuestion: r.fallbackQuestion as string,
+  };
 }
 
 export function buildInterviewerRequest(vaga: Vaga, conversa: Fala[]): LlmRequest {
