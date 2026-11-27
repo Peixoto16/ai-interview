@@ -1,0 +1,6 @@
+{
+  "titulo": "Engenharia Backend (pleno)",
+  "descricao": "Construir e manter APIs em Node.js e TypeScript, com banco relacional (PostgreSQL), filas de mensagens e testes automatizados. Trabalho em time pequeno, com revisão de código e deploy contínuo.",
+  "openingQuestion": "Para começar: me conte sobre um sistema backend que você construiu ou ajudou a construir. Qual era o problema e qual foi a sua parte?",
+  "fallbackQuestion": "Me conte sobre um bug difícil que você resolveu: como encontrou a causa e como corrigiu?"
+}
