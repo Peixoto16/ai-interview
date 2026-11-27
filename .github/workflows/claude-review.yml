@@ -67,6 +67,11 @@ jobs:
             Resultado: ${{ needs.testes.result }} (detalhes na aba Actions, etapa "testes").
             Não rode `npm test` de novo: use esse resultado no bloco Build.
             Para os comentários já existentes, use só `gh pr view` (não há `gh api` neste CI).
+
+            VOCÊ ESTÁ NO CI (GitHub Actions). O passo 6 da skill é OBRIGATÓRIO aqui:
+            salve o relatório em `review.md` e publique com
+            `gh pr comment ${{ github.event.pull_request.number }} --body-file review.md`.
+            O trabalho só termina depois que o comentário for publicado.
           # Lista fechada: só leitura + comentar no PR. Sem `gh api` (podia alterar/apagar coisas)
           # e sem `npm test` (rodaria código do PR perto do token).
           # Write serve para salvar o review.md; não há permissão de commit/push (contents: read).
