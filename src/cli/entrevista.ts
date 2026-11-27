@@ -4,7 +4,7 @@
 // no meio não perde nada. No fim, ela é conferida pelo replay.
 
 import { createInterface } from "node:readline/promises";
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { DEFAULT_CONFIG } from "../harness/config.ts";
 import { replay } from "../harness/session.ts";
 import { runInterview } from "../loop/entrevista.ts";
@@ -33,6 +33,11 @@ const arquivo = `sessoes/sessao-${new Date().toISOString().replace(/[:.]/g, "-")
 const salvar = (rec: SessaoGravada) => writeFileSync(arquivo, JSON.stringify(rec, null, 2));
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
+// Ctrl+C ou fim da entrada fecham o terminal. Sem isto, a pergunta pendente ficaria esperando para sempre.
+const entradaFechou = new Promise<never>((_, rejeitar) => {
+  rl.once("close", () => rejeitar(Object.assign(new Error("entrada encerrada"), { name: "AbortError" })));
+});
+entradaFechou.catch(() => {}); // evita aviso de "erro não tratado" quando ninguém está perguntando
 console.log(`\nEntrevista: ${vaga.titulo}   (modelo: ${modelo})`);
 console.log("Responda cada pergunta e aperte Enter. Ctrl+C sai (o que já respondeu fica salvo).\n");
 
@@ -46,14 +51,24 @@ try {
     aoTurno: salvar,
     ask: async (pergunta) => {
       let resposta = "";
-      while (resposta.trim() === "") resposta = await rl.question(`\nEntrevistador: ${pergunta}\nVocê: `);
+      while (resposta.trim() === "") {
+        resposta = await Promise.race([rl.question(`\nEntrevistador: ${pergunta}\nVocê: `), entradaFechou]);
+      }
       return resposta;
     },
   });
-} catch {
-  // Ctrl+C ou fim da entrada no meio de uma pergunta: os turnos já respondidos estão no arquivo.
-  console.log(`\nEntrevista interrompida. O que já foi respondido está salvo em ${arquivo}.`);
-  process.exit(0);
+} catch (e) {
+  // Só "a entrada acabou / foi cancelada" é interrupção normal: os turnos já respondidos estão no arquivo.
+  // Qualquer outro erro é bug de verdade: mostra e sai com código de erro (1), sem esconder.
+  const cancelou = e instanceof Error && (e.name === "AbortError" || (e as { code?: string }).code === "ABORT_ERR");
+  const salvo = existsSync(arquivo) ? `O que já foi respondido está salvo em ${arquivo}.` : "Nenhuma resposta tinha sido dada.";
+  if (cancelou) {
+    console.log(`\nEntrevista interrompida. ${salvo}`);
+    process.exit(0);
+  }
+  console.error(`\nErro inesperado: ${e instanceof Error ? e.stack ?? e.message : String(e)}`);
+  console.error(salvo);
+  process.exit(1);
 } finally {
   rl.close();
 }
