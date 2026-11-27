@@ -2,6 +2,10 @@
 # e publica o relatório como comentário no PR.
 # Roda só ao abrir/reabrir o PR ou ao sair de rascunho (economiza o limite do plano).
 # Para rodar de novo: aba Actions → este workflow → "Re-run jobs".
+#
+# Duas etapas, de propósito (Cap. 8, menor privilégio):
+#   1. "testes": roda o código do PR SEM nenhum segredo. Código malicioso não tem o que roubar.
+#   2. "review":  o Claude, com o token, mas SEM rodar código do PR e sem ferramenta que altere o GitHub.
 
 name: Claude Review
 
@@ -15,8 +19,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  testes:
+    # Não roda em rascunho nem em PR de fork (vindo de outra pessoa).
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # nem o token do checkout fica na máquina
+      # Os testes rodam TypeScript direto no Node (precisa de 22+). Sem dependências para instalar.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm test
+
   review:
-    if: github.event.pull_request.draft == false
+    needs: testes
+    # Roda mesmo se os testes falharem (o relatório mostra a falha), mas nunca se "testes" foi pulado.
+    if: always() && (needs.testes.result == 'success' || needs.testes.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Mínimo necessário: ler o código e comentar no PR.
@@ -24,16 +47,10 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # a skill compara com a main
-
-      # Os testes rodam TypeScript direto no Node (precisa de 22+). Sem dependências para instalar.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
 
       - uses: anthropics/claude-code-action@v1
         env:
@@ -41,9 +58,16 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: "/review PR #${{ github.event.pull_request.number }}"
-          # Lista fechada: só o que a skill precisa. Write serve para salvar o review.md;
-          # mesmo se escrever outra coisa, não há permissão de commit/push (contents: read).
+          prompt: |
+            /review PR #${{ github.event.pull_request.number }}
+
+            Contexto do CI: o `npm test` JÁ RODOU numa etapa separada, sem segredos.
+            Resultado: ${{ needs.testes.result }} (detalhes na aba Actions, etapa "testes").
+            Não rode `npm test` de novo: use esse resultado no bloco Build.
+            Para os comentários já existentes, use só `gh pr view` (não há `gh api` neste CI).
+          # Lista fechada: só leitura + comentar no PR. Sem `gh api` (podia alterar/apagar coisas)
+          # e sem `npm test` (rodaria código do PR perto do token).
+          # Write serve para salvar o review.md; não há permissão de commit/push (contents: read).
           claude_args: |
             --max-turns 30
-            --allowedTools "Agent,Task,Read,Glob,Grep,Write,Bash(npm test),Bash(gh pr diff *),Bash(gh pr view *),Bash(gh api *),Bash(gh pr comment *),Bash(git diff *)"
+            --allowedTools "Agent,Task,Read,Glob,Grep,Write,Bash(gh pr diff *),Bash(gh pr view *),Bash(gh pr comment *),Bash(git diff *)"
