@@ -24,9 +24,15 @@ export interface GoldenItem {
   humano: Scores;
 }
 
+// O que o judge recebe: a entrevista SEM a nota humana. Se o gabarito chegasse ao judge
+// (ex.: no prompt), ele poderia copiar a resposta e passar na régua sem ser medido de verdade.
+export type JudgeInput = Pick<GoldenItem, "id" | "vaga" | "transcricao">;
+
 // Os limites do livro: abaixo disso, a IA avaliadora não é usada.
 export const KAPPA_MIN = 0.6;
 export const MAX_ABS_BIAS = 0.5;
+// Com menos entrevistas que isso, a medida é sorte demais para confiar (VC-13).
+export const GOLDEN_MIN = 12;
 
 const NOTA_MIN = 1;
 const NOTA_MAX = 5;
@@ -109,9 +115,30 @@ function medir(modelo: number[], humano: number[]): Medidas {
   };
 }
 
+// Confere uma nota que veio de fora (judge ou arquivo): exatamente as 4 áreas, cada uma inteira
+// de 1 a 5, nada a mais. Entra como `unknown`, porque na Fase 5 ela vem de uma IA.
+export function parseScores(raw: unknown, onde: string): Scores {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    throw new Error(`${onde}: a nota não é um objeto (${JSON.stringify(raw)})`);
+  }
+  for (const chave of Object.keys(raw)) {
+    if (!(DIMENSIONS as readonly string[]).includes(chave)) throw new Error(`${onde}.${chave}: área desconhecida`);
+  }
+  const notas = {} as Scores;
+  for (const d of DIMENSIONS) {
+    const n: unknown = Object.hasOwn(raw, d) ? (raw as Record<string, unknown>)[d] : undefined;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < NOTA_MIN || n > NOTA_MAX) {
+      throw new Error(`${onde}.${d}: nota inválida (${JSON.stringify(n)}), esperado inteiro de ${NOTA_MIN} a ${NOTA_MAX}`);
+    }
+    notas[d] = n;
+  }
+  return notas;
+}
+
 // Roda um avaliador (judge) em todas as entrevistas do gabarito e mede a concordância
 // no geral (todas as notas juntas) e em cada área separada.
-export function agreementReport(itens: GoldenItem[], judge: (item: GoldenItem) => Scores): AgreementReport {
+// O judge recebe só a entrevista (sem a nota humana) e devolve `unknown`, que é validado aqui.
+export function agreementReport(itens: GoldenItem[], judge: (entrada: JudgeInput) => unknown): AgreementReport {
   const modelo: number[] = [];
   const humano: number[] = [];
   const porArea = Object.fromEntries(DIMENSIONS.map((d) => [d, { m: [] as number[], h: [] as number[] }])) as Record<
@@ -120,12 +147,19 @@ export function agreementReport(itens: GoldenItem[], judge: (item: GoldenItem) =
   >;
 
   for (const item of itens) {
-    const notas = judge(item);
+    const gabarito = parseScores(item.humano, `${item.id} (humano)`);
+    // Uma cópia nova, só com o que o judge pode ver (nunca o objeto do gabarito).
+    const entrada: JudgeInput = {
+      id: item.id,
+      vaga: item.vaga,
+      transcricao: item.transcricao.map((t) => ({ pergunta: t.pergunta, resposta: t.resposta })),
+    };
+    const notas = parseScores(judge(entrada), item.id);
     for (const d of DIMENSIONS) {
       modelo.push(notas[d]);
-      humano.push(item.humano[d]);
+      humano.push(gabarito[d]);
       porArea[d].m.push(notas[d]);
-      porArea[d].h.push(item.humano[d]);
+      porArea[d].h.push(gabarito[d]);
     }
   }
 
@@ -142,13 +176,15 @@ export function agreementReport(itens: GoldenItem[], judge: (item: GoldenItem) =
 // O PORTÃO DE LIBERAÇÃO: só confia na IA avaliadora se o kappa geral E o de cada área passarem
 // do mínimo, E o viés for pequeno no geral E em cada área. Um número geral bom pode esconder
 // uma área ruim (ex.: +1 em técnica e −1 em comunicação dá viés geral ≈ 0).
-export function releaseGate(
-  r: AgreementReport,
-  kappaMin = KAPPA_MIN,
-  maxAbsBias = MAX_ABS_BIAS,
-): { ok: boolean; reasons: string[] } {
+// Os limites são FIXOS (os da spec): não há parâmetro para afrouxá-los.
+export function releaseGate(r: AgreementReport): { ok: boolean; reasons: string[] } {
+  const kappaMin = KAPPA_MIN;
+  const maxAbsBias = MAX_ABS_BIAS;
   const reasons: string[] = [];
   const fmt = (x: number) => (Number.isNaN(x) ? "indefinido" : x.toFixed(3));
+
+  // Escrito como !(x >= min) DE PROPÓSITO: assim um valor NaN (kappa indefinido) também reprova.
+  if (!(r.n >= GOLDEN_MIN)) reasons.push(`golden set com ${r.n} entrevistas (mínimo ${GOLDEN_MIN})`);
 
   if (!(r.kappa >= kappaMin)) reasons.push(`kappa geral ${fmt(r.kappa)} < ${kappaMin}`);
   for (const d of DIMENSIONS) {
