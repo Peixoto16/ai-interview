@@ -30,10 +30,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false # nem o token do checkout fica na máquina
-      # Os testes rodam TypeScript direto no Node (precisa de 22+). Sem dependências para instalar.
+      # Os testes rodam TypeScript direto no Node (precisa de 22+).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      # Instala exatamente as versões do package-lock (o SDK da Anthropic). Esta etapa não tem segredos.
+      - run: npm ci --ignore-scripts
       - run: npm test
 
   review:

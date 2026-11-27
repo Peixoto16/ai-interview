@@ -34,6 +34,12 @@ Fonte da verdade para o comportamento da entrevista. Critérios em EARS; cada um
 - VC-12 As ferramentas da IA DEVEM ser só de leitura, sem parâmetro de ID, e argumentos fora do schema DEVEM ser rejeitados com erro registrado.
 - VC-13 A IA avaliadora (judge) NÃO DEVE ser usada a menos que, no golden set (12+ entrevistas com nota humana), tenha kappa quadrático >= 0,6 no geral E em cada área, E viés médio de no máximo 0,5 ponto no geral E em cada área. Com menos de 12 entrevistas, o portão DEVE reprovar. Os limites são fixos (não ajustáveis por quem chama). O judge NÃO DEVE receber a nota humana, e a nota dele entra como dado não confiável: exatamente as 4 áreas, inteiros de 1 a 5, nada a mais; senão, erro apontando a entrevista e a área.
 
+### Fase 5: o laço com o Claude (ver `docs/loop-spec.md`)
+- VC-14 SE a chamada à IA entrevistadora falhar (erro, demora acima do limite, recusa, resposta fora do formato), ENTÃO o sistema DEVE usar a pergunta de reserva (VC-10), registrar o motivo e seguir a entrevista, sem mostrar erro ao candidato.
+- VC-15 A janela da IA entrevistadora DEVE conter só o papel, a vaga, a regra de encerramento e a conversa, e NÃO DEVE conter contadores, mínimos, máximo nem regras de nota. A fala do candidato DEVE ir delimitada como dado, e o candidato NÃO DEVE conseguir fechar o delimitador.
+- VC-16 O sistema DEVE fazer no máximo uma chamada à IA entrevistadora por pergunta respondida, e o laço DEVE terminar em no máximo `maxQuestions` turnos.
+- VC-17 A sessão salva DEVE conter a saída bruta de cada chamada, o modelo e a versão do prompt, e o replay dela (VC-11) DEVE bater.
+
 ## Task breakdown
 Fase 1 tipos + spec do harness → 2 follow-up/portão/nota/plano B → 3 detector + replay → 4 evals + golden set
 → 5 policy e judge (LLM) → 6 segurança/ferramentas → 7 rotas + loop → 8 tela → 9 ADR/probe.

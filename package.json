@@ -4,6 +4,10 @@
   "type": "module",
   "description": "AI interviewer: a IA propõe, o código decide.",
   "scripts": {
-    "test": "node --experimental-strip-types --no-warnings --test \"test/**/*.test.ts\""
+    "test": "node --experimental-strip-types --no-warnings --test \"test/**/*.test.ts\"",
+    "entrevista": "node --env-file-if-exists=.env --experimental-strip-types --no-warnings src/cli/entrevista.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0"
   }
 }

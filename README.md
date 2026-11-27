@@ -28,20 +28,24 @@ Uma IA é criativa, mas não é confiável: ela pode querer encerrar a entrevist
 | 2 | Portão de fim, verificação de follow-up, `applyTurn`, plano B, nota final | feito |
 | 3 | Threat model, detector de injeção (alarme) e replay de sessões | feito |
 | 4 | Evals: IAs simuladas, golden set e régua de concordância do judge | feito |
-| 5 | Integração com Claude (entrevistador e avaliador) | próximo |
+| 5 | Integração com Claude: entrevistador no terminal (feito), avaliador (próximo) | em andamento |
 | 6 a 10 | Ferramentas, API, tela, ADR | planejado |
 
-Hoje o projeto tem **só o harness** (a parte determinística). Ainda **não** chama nenhum modelo de IA, não tem API nem tela. O roteiro completo está em [docs/ROADMAP.md](docs/ROADMAP.md).
+O Claude já conduz a entrevista no terminal; o harness continua decidindo tudo. Ainda não tem avaliador com IA, API nem tela. O roteiro completo está em [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## Como rodar os testes
+## Como rodar
 
-Requisitos: [Node.js](https://nodejs.org) 22 ou mais novo (testado na v26). Não há dependências para instalar.
+Requisitos: [Node.js](https://nodejs.org) 22 ou mais novo (testado na v26). Uma dependência: o SDK oficial da Anthropic.
 
 ```bash
-npm test
+npm install
+npm test             # os testes usam um "Claude falso": sem rede e sem custo
+npm run entrevista   # entrevista de verdade no terminal (precisa de ANTHROPIC_API_KEY no .env)
 ```
 
-Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **105 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
+Para trocar o modelo, coloque `AI_INTERVIEW_MODEL=...` no `.env` (padrão: `claude-haiku-5-5`, o mais barato). As sessões ficam em `sessoes/`, fora do git.
+
+Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **123 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
 
 ## Estrutura
 
@@ -56,10 +60,15 @@ ai-interview/
 │   ├── turn.ts         # applyTurn: um turno da entrevista (padrão reducer) e plano B
 │   └── score.ts        # nota final calculada em código
 ├── src/evals/          # evals: regras que sempre valem e régua de concordância do judge
+├── src/policy/         # a IA entrevistadora: o que ela vê (context.ts) e a chamada ao Claude (claude.ts)
+├── src/loop/           # o laço da entrevista: freios de tempo e de chamadas, plano B, gravação
+├── src/cli/            # `npm run entrevista` no terminal
+├── vagas/              # as vagas (título, descrição, 1a pergunta, pergunta de reserva)
 ├── evals/              # golden set: entrevistas com nota humana (o gabarito)
 ├── test/               # um teste por critério da spec (nome cita o VC)
 ├── docs/
-│   ├── spec.md         # as 13 regras da entrevista (VC-01 a VC-13)
+│   ├── spec.md         # as regras da entrevista (VC-01 a VC-17)
+│   ├── loop-spec.md    # como o laço com o Claude funciona (Fase 5)
 │   ├── contrato-harness.md
 │   └── ROADMAP.md      # as fases do projeto
 └── .claude/            # regras, hook e agentes para o Claude Code trabalhar no projeto
