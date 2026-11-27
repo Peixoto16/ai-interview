@@ -173,6 +173,33 @@ test("VC-13: gabarito com menos de 12 entrevistas reprova, mesmo com o judge per
   assert.equal(GOLDEN_MIN, 12);
 });
 
+test("VC-13: entrevista repetida não conta como nova (12 cópias da mesma não passam no mínimo)", () => {
+  const repetida = Array.from({ length: 12 }, () => itens[0]);
+  assert.throws(() => agreementReport(repetida, copia), /g01.*repetido/);
+  const comDuplicata = [...itens, { ...itens[3] }];
+  assert.throws(() => agreementReport(comDuplicata, copia), /g04.*repetido/);
+});
+
+test("VC-13: entrevista mal formada no gabarito dá erro com o id dela", () => {
+  const estragar = (mudanca: Record<string, unknown>) => [
+    ...itens.slice(0, 6),
+    { ...itens[6], ...mudanca } as unknown as GoldenItem,
+    ...itens.slice(7),
+  ];
+  const casos: [string, Record<string, unknown>, RegExp][] = [
+    ["sem transcrição", { transcricao: undefined }, /g07.*transcri/],
+    ["transcrição vazia", { transcricao: [] }, /g07.*transcri/],
+    ["pergunta não é texto", { transcricao: [{ pergunta: 42, resposta: "ok" }] }, /g07.*transcri/],
+    ["sem resposta", { transcricao: [{ pergunta: "Oi?" }] }, /g07.*transcri/],
+    ["vaga vazia", { vaga: "" }, /g07.*vaga/],
+  ];
+  for (const [nome, mudanca, erro] of casos) {
+    assert.throws(() => agreementReport(estragar(mudanca), copia), erro, nome);
+  }
+  const semId = [{ ...itens[0], id: "" } as GoldenItem, ...itens.slice(1)];
+  assert.throws(() => agreementReport(semId, copia), /id/);
+});
+
 test("VC-13: os limites são fixos; quem chama não consegue afrouxar o portão", () => {
   const afrouxar = releaseGate as (...args: unknown[]) => { ok: boolean };
   assert.equal(afrouxar(agreementReport(itens, bonzinho), 0, 9).ok, false);

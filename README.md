@@ -41,7 +41,7 @@ Requisitos: [Node.js](https://nodejs.org) 22 ou mais novo (testado na v26). Não
 npm test
 ```
 
-Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **101 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
+Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **103 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
 
 ## Estrutura
 

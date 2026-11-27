@@ -135,10 +135,33 @@ export function parseScores(raw: unknown, onde: string): Scores {
   return notas;
 }
 
+// Confere o gabarito antes de medir: cada entrevista bem formada e nenhum id repetido.
+// Sem isso, 12 cópias da mesma entrevista passariam no mínimo de 12 (VC-13).
+function conferirGabarito(itens: GoldenItem[]): void {
+  const vistos = new Set<string>();
+  itens.forEach((item, i) => {
+    const id: unknown = (item as { id?: unknown })?.id;
+    if (typeof id !== "string" || id.trim() === "") throw new Error(`item ${i + 1} do golden set: id inválido`);
+    if (vistos.has(id)) throw new Error(`${id}: id repetido no golden set (cada entrevista conta uma vez só)`);
+    vistos.add(id);
+    if (typeof item.vaga !== "string" || item.vaga.trim() === "") throw new Error(`${id}: vaga inválida`);
+    const t: unknown = item.transcricao;
+    const ok =
+      Array.isArray(t) &&
+      t.length > 0 &&
+      t.every(
+        (x) =>
+          typeof x === "object" && x !== null && typeof x.pergunta === "string" && typeof x.resposta === "string",
+      );
+    if (!ok) throw new Error(`${id}: transcrição inválida (precisa de pelo menos 1 {pergunta, resposta} em texto)`);
+  });
+}
+
 // Roda um avaliador (judge) em todas as entrevistas do gabarito e mede a concordância
 // no geral (todas as notas juntas) e em cada área separada.
 // O judge recebe só a entrevista (sem a nota humana) e devolve `unknown`, que é validado aqui.
 export function agreementReport(itens: GoldenItem[], judge: (entrada: JudgeInput) => unknown): AgreementReport {
+  conferirGabarito(itens);
   const modelo: number[] = [];
   const humano: number[] = [];
   const porArea = Object.fromEntries(DIMENSIONS.map((d) => [d, { m: [] as number[], h: [] as number[] }])) as Record<
@@ -178,23 +201,21 @@ export function agreementReport(itens: GoldenItem[], judge: (entrada: JudgeInput
 // uma área ruim (ex.: +1 em técnica e −1 em comunicação dá viés geral ≈ 0).
 // Os limites são FIXOS (os da spec): não há parâmetro para afrouxá-los.
 export function releaseGate(r: AgreementReport): { ok: boolean; reasons: string[] } {
-  const kappaMin = KAPPA_MIN;
-  const maxAbsBias = MAX_ABS_BIAS;
   const reasons: string[] = [];
   const fmt = (x: number) => (Number.isNaN(x) ? "indefinido" : x.toFixed(3));
 
   // Escrito como !(x >= min) DE PROPÓSITO: assim um valor NaN (kappa indefinido) também reprova.
   if (!(r.n >= GOLDEN_MIN)) reasons.push(`golden set com ${r.n} entrevistas (mínimo ${GOLDEN_MIN})`);
 
-  if (!(r.kappa >= kappaMin)) reasons.push(`kappa geral ${fmt(r.kappa)} < ${kappaMin}`);
+  if (!(r.kappa >= KAPPA_MIN)) reasons.push(`kappa geral ${fmt(r.kappa)} < ${KAPPA_MIN}`);
   for (const d of DIMENSIONS) {
     const k = r.perDimension[d].kappa;
-    if (!(k >= kappaMin)) reasons.push(`kappa de ${d} ${fmt(k)} < ${kappaMin}`);
+    if (!(k >= KAPPA_MIN)) reasons.push(`kappa de ${d} ${fmt(k)} < ${KAPPA_MIN}`);
   }
-  if (!(Math.abs(r.meanBias) <= maxAbsBias)) reasons.push(`viés médio ${fmt(r.meanBias)} fora de ±${maxAbsBias}`);
+  if (!(Math.abs(r.meanBias) <= MAX_ABS_BIAS)) reasons.push(`viés médio ${fmt(r.meanBias)} fora de ±${MAX_ABS_BIAS}`);
   for (const d of DIMENSIONS) {
     const b = r.perDimension[d].meanBias;
-    if (!(Math.abs(b) <= maxAbsBias)) reasons.push(`viés de ${d} ${fmt(b)} fora de ±${maxAbsBias}`);
+    if (!(Math.abs(b) <= MAX_ABS_BIAS)) reasons.push(`viés de ${d} ${fmt(b)} fora de ±${MAX_ABS_BIAS}`);
   }
 
   return { ok: reasons.length === 0, reasons };
