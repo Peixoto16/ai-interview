@@ -27,8 +27,9 @@ Uma IA é criativa, mas não é confiável: ela pode querer encerrar a entrevist
 | 1 | Spec em EARS, tipos e `validateConfig` | feito |
 | 2 | Portão de fim, verificação de follow-up, `applyTurn`, plano B, nota final | feito |
 | 3 | Threat model, detector de injeção (alarme) e replay de sessões | feito |
-| 4 | Evals e golden set | próximo |
-| 5 a 10 | Integração com Claude, ferramentas, API, tela, ADR | planejado |
+| 4 | Evals: IAs simuladas, golden set e régua de concordância do judge | feito |
+| 5 | Integração com Claude (entrevistador e avaliador) | próximo |
+| 6 a 10 | Ferramentas, API, tela, ADR | planejado |
 
 Hoje o projeto tem **só o harness** (a parte determinística). Ainda **não** chama nenhum modelo de IA, não tem API nem tela. O roteiro completo está em [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -40,7 +41,7 @@ Requisitos: [Node.js](https://nodejs.org) 22 ou mais novo (testado na v26). Não
 npm test
 ```
 
-Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **73 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
+Os testes rodam TypeScript direto no Node (`--experimental-strip-types`) com o `node:test`. Hoje são **105 testes**, incluindo o mais importante do projeto: *uma IA mentindo em todo turno não consegue encerrar a entrevista cedo*.
 
 ## Estrutura
 
@@ -54,9 +55,11 @@ ai-interview/
 │   ├── proposal.ts     # valida a proposta da IA (entra como `unknown`)
 │   ├── turn.ts         # applyTurn: um turno da entrevista (padrão reducer) e plano B
 │   └── score.ts        # nota final calculada em código
+├── src/evals/          # evals: regras que sempre valem e régua de concordância do judge
+├── evals/              # golden set: entrevistas com nota humana (o gabarito)
 ├── test/               # um teste por critério da spec (nome cita o VC)
 ├── docs/
-│   ├── spec.md         # as 12 regras da entrevista (VC-01 a VC-12)
+│   ├── spec.md         # as 13 regras da entrevista (VC-01 a VC-13)
 │   ├── contrato-harness.md
 │   └── ROADMAP.md      # as fases do projeto
 └── .claude/            # regras, hook e agentes para o Claude Code trabalhar no projeto
