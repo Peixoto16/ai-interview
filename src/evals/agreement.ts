@@ -135,10 +135,18 @@ export function parseScores(raw: unknown, onde: string): Scores {
   return notas;
 }
 
-// Confere o gabarito antes de medir: cada entrevista bem formada e nenhum id repetido.
-// Sem isso, 12 cópias da mesma entrevista passariam no mínimo de 12 (VC-13).
+// "Impressão digital" de uma entrevista: vaga + perguntas + respostas, ignorando espaços e maiúsculas.
+// Duas entrevistas com o mesmo conteúdo são a MESMA entrevista, mesmo com ids diferentes.
+const normalizar = (s: string) => s.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+const impressaoDigital = (item: GoldenItem) =>
+  JSON.stringify([normalizar(item.vaga), item.transcricao.map((t) => [normalizar(t.pergunta), normalizar(t.resposta)])]);
+
+// Confere o gabarito antes de medir: não vazio, cada entrevista bem formada, sem id repetido
+// e sem a mesma entrevista com outro nome. Sem isso, 12 cópias passariam no mínimo de 12 (VC-13).
 function conferirGabarito(itens: GoldenItem[]): void {
+  if (!Array.isArray(itens) || itens.length === 0) throw new Error("o golden set está vazio");
   const vistos = new Set<string>();
+  const conteudos = new Map<string, string>(); // impressão digital → id de quem apareceu primeiro
   itens.forEach((item, i) => {
     const id: unknown = (item as { id?: unknown })?.id;
     if (typeof id !== "string" || id.trim() === "") throw new Error(`item ${i + 1} do golden set: id inválido`);
@@ -154,6 +162,10 @@ function conferirGabarito(itens: GoldenItem[]): void {
           typeof x === "object" && x !== null && typeof x.pergunta === "string" && typeof x.resposta === "string",
       );
     if (!ok) throw new Error(`${id}: transcrição inválida (precisa de pelo menos 1 {pergunta, resposta} em texto)`);
+    const digital = impressaoDigital(item);
+    const original = conteudos.get(digital);
+    if (original !== undefined) throw new Error(`${id}: é a mesma entrevista que ${original} (só mudou o id)`);
+    conteudos.set(digital, id);
   });
 }
 

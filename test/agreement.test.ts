@@ -180,6 +180,18 @@ test("VC-13: entrevista repetida não conta como nova (12 cópias da mesma não 
   assert.throws(() => agreementReport(comDuplicata, copia), /g04.*repetido/);
 });
 
+test("VC-13: a mesma entrevista com ids diferentes não conta como várias", () => {
+  const renomeadas = Array.from({ length: 12 }, (_, i) => ({ ...itens[0], id: `copia-${i}` }));
+  assert.throws(() => agreementReport(renomeadas, copia), /copia-1.*mesma entrevista.*copia-0/);
+  // diferença só de espaços ou maiúsculas também é cópia
+  const disfarcada = { ...itens[2], id: "g03-bis", vaga: ` ${itens[2].vaga.toUpperCase()} ` };
+  assert.throws(() => agreementReport([...itens, disfarcada], copia), /g03-bis.*g03/);
+});
+
+test("VC-13: golden set vazio dá erro claro", () => {
+  assert.throws(() => agreementReport([], copia), /golden set.*vazio/);
+});
+
 test("VC-13: entrevista mal formada no gabarito dá erro com o id dela", () => {
   const estragar = (mudanca: Record<string, unknown>) => [
     ...itens.slice(0, 6),
